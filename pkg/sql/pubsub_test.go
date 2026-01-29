@@ -10,15 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill-sql/v4/pkg/sql"
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/subscriber"
-	"github.com/ThreeDotsLabs/watermill/pubsub/tests"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/subscriber"
+	"github.com/ThreeDotsLabs/watermill/pubsub/tests"
+
+	"github.com/ThreeDotsLabs/watermill-sql/v4/pkg/sql"
 )
 
 var (
@@ -220,10 +222,9 @@ func TestCtxValues(t *testing.T) {
 		case msg := <-messages:
 			tx, ok := sql.TxFromContext(msg.Context())
 			assert.True(t, ok)
-			assert.NotNil(t, t, tx)
-			// pgx.Tx is the expected type now
-			_, isPgxTx := tx.(pgx.Tx)
-			assert.True(t, isPgxTx, "expected pgx.Tx type")
+			assert.NotNil(t, tx)
+			// Verify tx is not nil (it's already typed as pgx.Tx from TxFromContext)
+			assert.NotNil(t, tx, "expected pgx.Tx type")
 			msg.Ack()
 		case <-time.After(time.Second * 10):
 			t.Fatal("no message received")

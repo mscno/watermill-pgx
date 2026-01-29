@@ -260,6 +260,22 @@ func (s *Subscriber) consume(ctx context.Context, topic string, out chan *messag
 	}
 }
 
+func (s *Subscriber) finalizeTx(ctx context.Context, tx pgx.Tx, err error, logger watermill.LoggerAdapter) {
+	if err != nil {
+		rollbackErr := tx.Rollback(context.WithoutCancel(ctx))
+		if rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			logger.Error("could not rollback tx for querying message", rollbackErr, watermill.LogFields{
+				"query_err": err,
+			})
+		}
+		return
+	}
+	commitErr := tx.Commit(ctx)
+	if commitErr != nil && !errors.Is(commitErr, pgx.ErrTxClosed) && !errors.Is(commitErr, pgx.ErrTxCommitRollback) {
+		logger.Error("could not commit tx for querying message", commitErr, nil)
+	}
+}
+
 func (s *Subscriber) query(
 	ctx context.Context,
 	topic string,
@@ -275,21 +291,7 @@ func (s *Subscriber) query(
 	}
 
 	defer func() {
-		if err != nil {
-			rollbackErr := tx.Rollback(context.WithoutCancel(ctx))
-			if rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
-				logger.Error("could not rollback tx for querying message", rollbackErr, watermill.LogFields{
-					"query_err": err,
-				})
-			}
-		} else {
-			commitErr := tx.Commit(ctx)
-			if commitErr != nil &&
-				!errors.Is(commitErr, pgx.ErrTxClosed) &&
-				!errors.Is(commitErr, pgx.ErrTxCommitRollback) {
-				logger.Error("could not commit tx for querying message", commitErr, nil)
-			}
-		}
+		s.finalizeTx(ctx, tx, err, logger)
 	}()
 
 	selectQuery, err := s.config.SchemaAdapter.SelectQuery(

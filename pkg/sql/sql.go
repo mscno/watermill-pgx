@@ -26,7 +26,7 @@ type Beginner interface {
 type sqlArgsToLog []interface{}
 
 func (s sqlArgsToLog) String() string {
-	var strArgs []string
+	strArgs := make([]string, 0, len(s))
 	for _, arg := range s {
 		strArgs = append(strArgs, fmt.Sprintf("%v", arg))
 	}

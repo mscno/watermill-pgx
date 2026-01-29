@@ -62,7 +62,7 @@ type Row struct {
 }
 
 func defaultInsertArgs(msgs message.Messages) ([]interface{}, error) {
-	var args []interface{}
+	args := make([]interface{}, 0, len(msgs)*3)
 	for _, msg := range msgs {
 		metadata, err := json.Marshal(msg.Metadata)
 		if err != nil {

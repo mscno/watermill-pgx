@@ -1,0 +1,65 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    # Bug detection
+    - errcheck
+    - gosec
+    - govet
+    - staticcheck
+    - typecheck
+
+    # Code quality
+    - ineffassign
+    - unused
+    - gocyclo
+    - gocognit
+    - dupl
+
+    # Style
+    - gofmt
+    - goimports
+
+    # Error handling
+    - errorlint
+
+    # Performance
+    - prealloc
+    - gosimple
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+
+  gocognit:
+    min-complexity: 20
+
+  goimports:
+    local-prefixes: github.com/ThreeDotsLabs/watermill-sql
+
+  dupl:
+    threshold: 150
+
+  gosec:
+    excludes:
+      - G404  # Use of weak random number generator
+
+issues:
+  exclude-rules:
+    # Exclude complexity checks for test files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - gocognit
+        - dupl
+
+    # Exclude some linters from running on tests
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
