@@ -3,6 +3,8 @@ package sql
 import (
 	"context"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -59,7 +61,7 @@ func initializeSchema(
 
 func initialise(ctx context.Context, db ContextExecutor, initializingQueries []Query) error {
 	for _, q := range initializingQueries {
-		_, err := db.ExecContext(ctx, q.Query, q.Args...)
+		_, err := db.Exec(ctx, q.Query, q.Args...)
 		if err != nil {
 			return fmt.Errorf("could not initialize schema: %w", err)
 		}
@@ -74,7 +76,7 @@ func initialiseInTx(ctx context.Context, db ContextExecutor, initializingQueries
 		return errors.New("db is not a Beginner")
 	}
 
-	err := runInTx(ctx, beginner, func(ctx context.Context, tx Tx) error {
+	err := runInTx(ctx, beginner, func(ctx context.Context, tx pgx.Tx) error {
 		return initialise(ctx, tx, initializingQueries)
 	})
 	if err != nil {

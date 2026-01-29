@@ -2,8 +2,6 @@ package sql
 
 import (
 	"fmt"
-
-	"github.com/lib/pq"
 )
 
 // PostgreSQLQueueOffsetsAdapter is an OffsetsAdapter for the PostgreSQLQueueSchema.
@@ -44,7 +42,7 @@ func (a PostgreSQLQueueOffsetsAdapter) AckMessageQuery(params AckMessageQueryPar
 		offsets[i] = row.Offset
 	}
 
-	return Query{ackQuery, []any{pq.Array(offsets)}}, nil
+	return Query{ackQuery, []any{offsets}}, nil
 }
 
 func (a PostgreSQLQueueOffsetsAdapter) MessagesTable(topic string) string {

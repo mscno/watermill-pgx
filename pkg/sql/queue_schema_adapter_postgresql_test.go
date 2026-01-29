@@ -18,7 +18,7 @@ import (
 func TestPostgreSQLQueueSchemaAdapter(t *testing.T) {
 	t.Parallel()
 
-	db := newPostgreSQL(t)
+	db := newPgx(t)
 
 	schemaAdapter := sql.PostgreSQLQueueSchema{
 		GenerateWhereClause: func(params sql.GenerateWhereClauseParams) (string, []any) {

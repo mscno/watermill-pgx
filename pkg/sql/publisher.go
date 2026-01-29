@@ -123,7 +123,7 @@ func (p *Publisher) Publish(topic string, messages ...*message.Message) (err err
 	} else {
 		ctx = context.Background()
 	}
-	_, err = p.db.ExecContext(ctx, insertQuery.Query, insertQuery.Args...)
+	_, err = p.db.Exec(ctx, insertQuery.Query, insertQuery.Args...)
 	if err != nil {
 		return fmt.Errorf("could not insert message as row: %w", err)
 	}
@@ -176,8 +176,8 @@ func (p *Publisher) Close() error {
 
 func isTx(db ContextExecutor) bool {
 	_, dbIsTx := db.(interface {
-		Commit() error
-		Rollback() error
+		Commit(ctx context.Context) error
+		Rollback(ctx context.Context) error
 	})
 	return dbIsTx
 }

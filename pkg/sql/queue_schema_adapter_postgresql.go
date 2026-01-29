@@ -1,11 +1,12 @@
 package sql
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 )
@@ -40,7 +41,7 @@ type PostgreSQLQueueSchema struct {
 }
 
 func (s PostgreSQLQueueSchema) SchemaInitializingQueries(params SchemaInitializingQueriesParams) ([]Query, error) {
-	createMessagesTable := ` 
+	createMessagesTable := `
 		CREATE TABLE IF NOT EXISTS ` + s.MessagesTable(params.Topic) + ` (
 			"offset" SERIAL PRIMARY KEY,
 			"uuid" VARCHAR(36) NOT NULL,
@@ -148,9 +149,9 @@ func (s PostgreSQLQueueSchema) MessagesTable(topic string) string {
 	return fmt.Sprintf(`"watermill_%s"`, topic)
 }
 
-func (s PostgreSQLQueueSchema) SubscribeIsolationLevel() sql.IsolationLevel {
+func (s PostgreSQLQueueSchema) SubscribeIsolationLevel() pgx.TxIsoLevel {
 	// For Postgres Repeatable Read is enough.
-	return sql.LevelRepeatableRead
+	return pgx.RepeatableRead
 }
 
 func (s PostgreSQLQueueSchema) payloadColumnType(topic string) string {

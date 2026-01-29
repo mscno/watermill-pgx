@@ -25,9 +25,6 @@ func NewDefaultBackoffManager(pollInterval, retryInterval time.Duration) Backoff
 		retryInterval: retryInterval,
 		pollInterval:  pollInterval,
 		deadlockIndicators: []string{
-			// MySQL deadlock indicator
-			"deadlock",
-
 			// PostgreSQL deadlock indicator
 			"concurrent update",
 		},

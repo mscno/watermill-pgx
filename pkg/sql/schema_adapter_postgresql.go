@@ -1,14 +1,14 @@
 package sql
 
 import (
-	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
 	"strconv"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 )
@@ -48,7 +48,7 @@ func (s DefaultPostgreSQLSchema) SchemaInitializingQueries(params SchemaInitiali
 	//
 	// it's intended that transaction_id is first in the index, because we are using it alone
 	// in the WHERE clause
-	createMessagesTable := ` 
+	createMessagesTable := `
 		CREATE TABLE IF NOT EXISTS ` + s.MessagesTable(params.Topic) + ` (
 			"offset" BIGSERIAL,
 			"uuid" VARCHAR(36) NOT NULL,
@@ -182,17 +182,17 @@ func (s DefaultPostgreSQLSchema) SelectQuery(params SelectQueryParams) (Query, e
 
 		SELECT "offset", transaction_id, uuid, payload, metadata FROM ` + s.MessagesTable(params.Topic) + `
 
-		WHERE 
+		WHERE
 		(
 			(
-				transaction_id = (SELECT last_processed_transaction_id FROM last_processed) 
-				AND 
+				transaction_id = (SELECT last_processed_transaction_id FROM last_processed)
+				AND
 				"offset" > (SELECT offset_acked FROM last_processed)
 			)
 			OR
 			(transaction_id > (SELECT last_processed_transaction_id FROM last_processed))
 		)
-		AND 
+		AND
 			transaction_id < pg_snapshot_xmin(pg_current_snapshot())
 	) AS messages
 	ORDER BY
@@ -244,9 +244,9 @@ func (s DefaultPostgreSQLSchema) PayloadColumnType(topic string) string {
 	return s.GeneratePayloadType(topic)
 }
 
-func (s DefaultPostgreSQLSchema) SubscribeIsolationLevel() sql.IsolationLevel {
+func (s DefaultPostgreSQLSchema) SubscribeIsolationLevel() pgx.TxIsoLevel {
 	// For Postgres Repeatable Read is enough.
-	return sql.LevelRepeatableRead
+	return pgx.RepeatableRead
 }
 
 func (s DefaultPostgreSQLSchema) RequiresTransaction() bool {
@@ -269,7 +269,6 @@ func (x *XID8) Scan(src interface{}) error {
 		return errors.New("cannot scan nil value into XID8")
 	}
 
-	// We want to support scanning from various types (different drivers, like lib/pq, pgx, etc.)
 	switch v := src.(type) {
 	case int64:
 		if v < 0 {
@@ -282,18 +281,6 @@ func (x *XID8) Scan(src interface{}) error {
 		*x = XID8(v)
 		return nil
 
-	case int32:
-		if v < 0 {
-			return fmt.Errorf("cannot convert negative int32 %d to XID8", v)
-		}
-		*x = XID8(uint64(v))
-		return nil
-
-	case uint32:
-		*x = XID8(v)
-		return nil
-
-	// pgx
 	case string:
 		if v == "" {
 			*x = 0
@@ -306,25 +293,7 @@ func (x *XID8) Scan(src interface{}) error {
 		*x = XID8(val)
 		return nil
 
-	// lib/pq
-	case []byte:
-		if len(v) == 0 {
-			*x = 0
-			return nil
-		}
-
-		val, err := strconv.ParseUint(string(v), 10, 64)
-		if err != nil {
-			return fmt.Errorf("cannot parse bytes %q as uint64: %w", string(v), err)
-		}
-		*x = XID8(val)
-		return nil
-
 	default:
 		return fmt.Errorf("cannot scan %T into XID8", src)
 	}
-}
-
-func (x *XID8) Value() (driver.Value, error) {
-	return uint64(*x), nil
 }

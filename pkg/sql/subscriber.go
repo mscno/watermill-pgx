@@ -2,7 +2,6 @@ package sql
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"sync"
@@ -191,13 +190,13 @@ func (s *Subscriber) Subscribe(ctx context.Context, topic string) (o <-chan *mes
 	}
 
 	if len(bsq) >= 1 {
-		err := runInTx(ctx, s.db, func(ctx context.Context, tx Tx) error {
+		err := runInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 			for _, q := range bsq {
 				s.logger.Debug("Executing before subscribing query", watermill.LogFields{
 					"query": q,
 				})
 
-				_, err := tx.ExecContext(ctx, q.Query, q.Args...)
+				_, err := tx.Exec(ctx, q.Query, q.Args...)
 				if err != nil {
 					return fmt.Errorf("cannot execute before subscribing query: %w", err)
 				}
@@ -267,8 +266,8 @@ func (s *Subscriber) query(
 	out chan *message.Message,
 	logger watermill.LoggerAdapter,
 ) (noMsg bool, err error) {
-	txOptions := &sql.TxOptions{
-		Isolation: s.config.SchemaAdapter.SubscribeIsolationLevel(),
+	txOptions := pgx.TxOptions{
+		IsoLevel: s.config.SchemaAdapter.SubscribeIsolationLevel(),
 	}
 	tx, err := s.db.BeginTx(ctx, txOptions)
 	if err != nil {
@@ -277,16 +276,16 @@ func (s *Subscriber) query(
 
 	defer func() {
 		if err != nil {
-			rollbackErr := tx.Rollback()
-			if rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+			rollbackErr := tx.Rollback(context.WithoutCancel(ctx))
+			if rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
 				logger.Error("could not rollback tx for querying message", rollbackErr, watermill.LogFields{
 					"query_err": err,
 				})
 			}
 		} else {
-			commitErr := tx.Commit()
+			commitErr := tx.Commit(ctx)
 			if commitErr != nil &&
-				!errors.Is(commitErr, sql.ErrTxDone) &&
+				!errors.Is(commitErr, pgx.ErrTxClosed) &&
 				!errors.Is(commitErr, pgx.ErrTxCommitRollback) {
 				logger.Error("could not commit tx for querying message", commitErr, nil)
 			}
@@ -307,15 +306,13 @@ func (s *Subscriber) query(
 		"query":      selectQuery.Query,
 		"query_args": sqlArgsToLog(selectQuery.Args),
 	})
-	rows, err := tx.QueryContext(ctx, selectQuery.Query, selectQuery.Args...)
+	rows, err := tx.Query(ctx, selectQuery.Query, selectQuery.Args...)
 	if err != nil {
 		return false, fmt.Errorf("could not query message: %w", err)
 	}
 
 	defer func() {
-		if rowsCloseErr := rows.Close(); rowsCloseErr != nil {
-			err = errors.Join(err, fmt.Errorf("could not close rows: %w", err))
-		}
+		rows.Close()
 	}()
 
 	var lastOffset int64
@@ -327,7 +324,7 @@ func (s *Subscriber) query(
 		row, err := s.config.SchemaAdapter.UnmarshalMessage(UnmarshalMessageParams{
 			Row: rows,
 		})
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return true, nil
 		} else if err != nil {
 			return false, fmt.Errorf("could not unmarshal message from query: %w", err)
@@ -370,12 +367,12 @@ func (s *Subscriber) query(
 		"query_args": sqlArgsToLog(ackQuery.Args),
 	})
 
-	result, err := tx.ExecContext(ctx, ackQuery.Query, ackQuery.Args...)
+	result, err := tx.Exec(ctx, ackQuery.Query, ackQuery.Args...)
 	if err != nil {
 		return false, fmt.Errorf("could not get args for acking the message: %w", err)
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected := result.RowsAffected()
 
 	logger.Trace("Executed ack message query", watermill.LogFields{
 		"rows_affected": rowsAffected,
@@ -388,7 +385,7 @@ func (s *Subscriber) processMessage(
 	ctx context.Context,
 	topic string,
 	row Row,
-	tx Tx,
+	tx pgx.Tx,
 	out chan *message.Message,
 	logger watermill.LoggerAdapter,
 ) (bool, error) {
@@ -415,7 +412,7 @@ func (s *Subscriber) processMessage(
 			"query_args": sqlArgsToLog(consumedQuery.Args),
 		})
 
-		_, err := tx.ExecContext(ctx, consumedQuery.Query, consumedQuery.Args...)
+		_, err := tx.Exec(ctx, consumedQuery.Query, consumedQuery.Args...)
 		if err != nil {
 			return false, fmt.Errorf("cannot send consumed query: %w", err)
 		}

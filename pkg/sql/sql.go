@@ -2,48 +2,24 @@ package sql
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
-
-// A Result summarizes an executed SQL command.
-type Result interface {
-	// RowsAffected returns the number of rows affected by an
-	// update, insert, or delete. Not every database or database
-	// driver may support this.
-	RowsAffected() (int64, error)
-}
-
-type Rows interface {
-	Scan(dest ...any) error
-	Close() error
-	Next() bool
-}
-
-type Tx interface {
-	ContextExecutor
-	Rollback() error
-	Commit() error
-}
 
 // ContextExecutor can perform SQL queries with context
 type ContextExecutor interface {
-	ExecContext(ctx context.Context, query string, args ...any) (Result, error)
-	QueryContext(ctx context.Context, query string, args ...any) (Rows, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
 // Beginner begins transactions.
 type Beginner interface {
-	BeginTx(context.Context, *sql.TxOptions) (Tx, error)
+	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
 	ContextExecutor
-}
-
-// SQLBeginner matches the standard library sql.DB and sql.Tx interfaces.
-type SQLBeginner interface {
-	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
 // sqlArgsToLog is used for "lazy" generating sql args strings to logger

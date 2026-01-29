@@ -1,13 +1,12 @@
 package main
 
 import (
-	stdSQL "database/sql"
+	"context"
 	"fmt"
 	"os"
 	"time"
 
-	driver "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -25,42 +24,7 @@ func main() {
 }
 
 func tryConnecting() error {
-	err := connectToMySQL()
-	if err != nil {
-		return err
-	}
-
-	err = connectToPostgreSQL()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func connectToMySQL() error {
-	addr := os.Getenv("WATERMILL_TEST_MYSQL_HOST")
-	if addr == "" {
-		addr = "localhost"
-	}
-	conf := driver.NewConfig()
-	conf.Net = "tcp"
-	conf.User = "root"
-	conf.Addr = addr
-
-	conf.DBName = "watermill"
-
-	db, err := stdSQL.Open("mysql", conf.FormatDSN())
-	if err != nil {
-		return err
-	}
-
-	err = db.Ping()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return connectToPostgreSQL()
 }
 
 func connectToPostgreSQL() error {
@@ -70,12 +34,13 @@ func connectToPostgreSQL() error {
 	}
 
 	connStr := fmt.Sprintf("postgres://watermill:password@%s/watermill?sslmode=disable", addr)
-	db, err := stdSQL.Open("postgres", connStr)
+	db, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
-	err = db.Ping()
+	err = db.Ping(context.Background())
 	if err != nil {
 		return err
 	}

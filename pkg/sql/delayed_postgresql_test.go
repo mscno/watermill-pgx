@@ -17,7 +17,7 @@ import (
 func TestDelayedPostgreSQL(t *testing.T) {
 	t.Parallel()
 
-	db := newPostgreSQL(t)
+	db := newPgx(t)
 
 	pub, err := sql.NewDelayedPostgreSQLPublisher(db, sql.DelayedPostgreSQLPublisherConfig{
 		DelayPublisherConfig: delay.PublisherConfig{
@@ -65,7 +65,7 @@ func TestDelayedPostgreSQL(t *testing.T) {
 func TestDelayedPostgreSQL_NoDelay(t *testing.T) {
 	t.Parallel()
 
-	db := newPostgreSQL(t)
+	db := newPgx(t)
 
 	pub, err := sql.NewDelayedPostgreSQLPublisher(db, sql.DelayedPostgreSQLPublisherConfig{
 		DelayPublisherConfig: delay.PublisherConfig{

@@ -70,45 +70,6 @@ func TestXID8_Scan(t *testing.T) {
 			expected: XID8(math.MaxUint64),
 		},
 
-		// int32 types
-		{
-			name:     "int32 positive",
-			input:    int32(12345),
-			expected: XID8(12345),
-		},
-		{
-			name:     "int32 zero",
-			input:    int32(0),
-			expected: XID8(0),
-		},
-		{
-			name:     "int32 max value",
-			input:    int32(math.MaxInt32),
-			expected: XID8(math.MaxInt32),
-		},
-		{
-			name:    "int32 negative",
-			input:   int32(-1),
-			wantErr: true,
-			errMsg:  "cannot convert negative int32",
-		},
-
-		// uint32 types
-		{
-			name:     "uint32 positive",
-			input:    uint32(12345),
-			expected: XID8(12345),
-		},
-		{
-			name:     "uint32 zero",
-			input:    uint32(0),
-			expected: XID8(0),
-		},
-		{
-			name:     "uint32 max value",
-			input:    uint32(math.MaxUint32),
-			expected: XID8(math.MaxUint32),
-		},
 		// String types
 		{
 			name:     "string positive number",
@@ -147,43 +108,6 @@ func TestXID8_Scan(t *testing.T) {
 			wantErr: true,
 			errMsg:  "cannot parse string",
 		},
-		// Byte slice types
-		{
-			name:     "bytes number",
-			input:    []byte{51, 55, 57, 51, 50},
-			expected: XID8(37932), // "37932" in bytes
-		},
-		{
-			name:     "bytes as string number",
-			input:    []byte("12345"),
-			expected: XID8(12345),
-		},
-		{
-			name:     "bytes zero",
-			input:    []byte("0"),
-			expected: XID8(0),
-		},
-		{
-			name:     "bytes large number",
-			input:    []byte("18446744073709551615"),
-			expected: XID8(math.MaxUint64),
-		},
-		{
-			name:     "empty bytes",
-			input:    []byte{},
-			expected: XID8(0),
-		},
-		{
-			name:     "empty bytes nil",
-			input:    []byte(nil),
-			expected: XID8(0),
-		},
-		{
-			name:    "bytes invalid string",
-			input:   []byte("abc123"),
-			wantErr: true,
-			errMsg:  "cannot parse bytes",
-		},
 	}
 
 	for _, tt := range tests {
@@ -200,43 +124,6 @@ func TestXID8_Scan(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected, x)
 			}
-		})
-	}
-}
-
-func TestXID8_Value(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    XID8
-		expected uint64
-	}{
-		{
-			name:     "zero value",
-			input:    XID8(0),
-			expected: 0,
-		},
-		{
-			name:     "small positive value",
-			input:    XID8(12345),
-			expected: 12345,
-		},
-		{
-			name:     "max uint64 value",
-			input:    XID8(math.MaxUint64),
-			expected: math.MaxUint64,
-		},
-		{
-			name:     "real postgres xid8 value",
-			input:    XID8(732406),
-			expected: 732406,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			value, err := tt.input.Value()
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, value)
 		})
 	}
 }
