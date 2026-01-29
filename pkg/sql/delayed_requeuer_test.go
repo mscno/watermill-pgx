@@ -3,6 +3,7 @@ package sql_test
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -40,6 +41,7 @@ func TestPostgreSQLDelayedRequeuer(t *testing.T) {
 	router.AddMiddleware(delayedRequeuer.Middleware()...)
 
 	var receivedMessages []string
+	var mu sync.Mutex
 
 	router.AddConsumerHandler(
 		"test",
@@ -51,7 +53,9 @@ func TestPostgreSQLDelayedRequeuer(t *testing.T) {
 				return fmt.Errorf("error")
 			}
 
+			mu.Lock()
 			receivedMessages = append(receivedMessages, msg.UUID)
+			mu.Unlock()
 
 			return nil
 		},
@@ -79,6 +83,8 @@ func TestPostgreSQLDelayedRequeuer(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.EventuallyWithT(t, func(t *assert.CollectT) {
+		mu.Lock()
+		defer mu.Unlock()
 		assert.Equal(t, []string{"1", "3"}, receivedMessages)
 	}, 1*time.Second, 100*time.Millisecond)
 }
