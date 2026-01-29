@@ -1,4 +1,4 @@
-module github.com/ThreeDotsLabs/watermill-sql/v4
+module github.com/mscno/watermill-pgx
 
 go 1.24.0
 

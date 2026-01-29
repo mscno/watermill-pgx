@@ -37,7 +37,7 @@ linters-settings:
     min-complexity: 20
 
   goimports:
-    local-prefixes: github.com/ThreeDotsLabs/watermill-sql
+    local-prefixes: github.com/mscno/watermill-pgx
 
   dupl:
     threshold: 150

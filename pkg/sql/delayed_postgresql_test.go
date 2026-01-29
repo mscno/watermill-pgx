@@ -12,7 +12,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/components/delay"
 	"github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/ThreeDotsLabs/watermill-sql/v4/pkg/sql"
+	"github.com/mscno/watermill-pgx/pkg/sql"
 )
 
 func TestDelayedPostgreSQL(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/subscriber"
 	"github.com/ThreeDotsLabs/watermill/pubsub/tests"
 
-	"github.com/ThreeDotsLabs/watermill-sql/v4/pkg/sql"
+	"github.com/mscno/watermill-pgx/pkg/sql"
 )
 
 var (
